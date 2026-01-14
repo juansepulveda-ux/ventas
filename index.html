@@ -360,6 +360,7 @@
       <span class="pill">Filas tras filtros: <b id="rowsInRange">0</b></span>
       <span class="pill">Clientes (tras filtros): <b id="clientsInRange">0</b></span>
       <span class="pill">Clientes con X visitas: <b id="clientsExact">0</b></span>
+      <span class="pill">Total $ (clientes con X visitas): <b id="amountExact">0</b></span>
       <span class="pill">Total $ (filas filtradas): <b id="totalRange">0</b></span>
       <span class="pill">Total $ (doc único filtrado): <b id="totalDocUnique">0</b></span>
     </div>
@@ -591,6 +592,7 @@
     const rowsInRangeEl = $("rowsInRange");
     const clientsInRangeEl = $("clientsInRange");
     const clientsExactEl = $("clientsExact");
+    const amountExactEl = $("amountExact");
     const totalRangeEl = $("totalRange");
     const totalDocUniqueEl = $("totalDocUnique");
     const outBody = $("outBody");
@@ -1401,6 +1403,9 @@ const filteredRows = rows.filter(r => {
         .sort((a, b) => (a.Alumno || "").localeCompare(b.Alumno || "", "es"));
 
       clientsExactEl.textContent = filteredClients.length;
+
+      const amountExact = filteredClients.reduce((acc, c) => acc + (Number(c.Monto) || 0), 0);
+      if (amountExactEl) amountExactEl.textContent = "$ " + formatCLP(amountExact);
 
       lastFilteredClients = filteredClients;
       renderTable(filteredClients);
