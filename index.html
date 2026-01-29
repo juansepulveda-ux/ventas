@@ -3,1481 +3,375 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Gravity - Filtro XLS (moderno: selector de planes)</title>
+  <title>Visualizador de Ventas (Mes vs Año)</title>
+
+  <!-- Librerías (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
   <style>
-    :root { --b:#e5e7eb; --b2:#f3f4f6; --text:#0f172a; --muted:#64748b; --bg:#ffffff; --shadow: 0 10px 30px rgba(2,6,23,.08); }
-    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 22px; line-height: 1.35; color: var(--text); background: #fff; }
-    h1 { font-size: 18px; margin: 0 0 14px; }
-    h2 { font-size: 14px; margin: 0 0 10px; }
-    .card { border: 1px solid var(--b); border-radius: 16px; padding: 16px; margin: 14px 0; background: var(--bg); box-shadow: 0 1px 0 rgba(2,6,23,.02); }
-    .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: end; }
-    .span-12{ grid-column: span 12; } .span-8{ grid-column: span 8; } .span-6{ grid-column: span 6; }
-    .span-4{ grid-column: span 4; } .span-3{ grid-column: span 3; } .span-2{ grid-column: span 2; }
-    label { display: block; font-size: 12px; color: #334155; margin-bottom: 6px; }
-    input, select, button { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 11px; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 14px; background: #fff; }
-    input:focus, select:focus, button:focus { outline: 2px solid rgba(15,23,42,.15); outline-offset: 2px; }
-    button { cursor: pointer; border: 1px solid #0f172a; background: #0f172a; color: #fff; }
-    button.secondary { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
-    button.ghost { background: #fff; color: #0f172a; border: 1px solid transparent; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    .muted { color: var(--muted); font-size: 12px; margin-top: 6px; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--b); border-radius: 999px; font-size: 13px; background: #fff; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border-bottom: 1px solid var(--b2); text-align: left; padding: 10px 6px; font-size: 13px; vertical-align: top; }
-    th { font-size: 12px; color: #334155; white-space: nowrap; }
-    .err { color: #b00; margin-top: 8px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    .box { border: 1px dashed #cbd5e1; border-radius: 16px; padding: 14px; background: #f8fafc; }
-    .box.dragover { border-color: #0f172a; background: #f1f5f9; }
-    .checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
-    .check { display: flex; gap: 8px; align-items: center; border: 1px solid var(--b); border-radius: 12px; padding: 8px 10px; background: #fff; }
-    .check input { width: auto; }
-    .small { font-size: 12px; color: var(--muted); }
-    .divider { border:none; border-top:1px solid var(--b2); margin: 4px 0; }
-
-/* Segmented day-of-week selector */
-.segmented{
-  display: inline-flex;
-  border: 1px solid var(--b);
-  border-radius: 14px;
-  overflow: hidden;
-  background: #fff;
-  box-shadow: 0 1px 0 rgba(2,6,23,.02);
-}
-.segmented button{
-  width: auto;
-  min-width: 44px;
-  padding: 8px 10px;
-  border: none;
-  border-right: 1px solid var(--b2);
-  background: #fff;
-  color: #0f172a;
-  font-weight: 600;
-  cursor: pointer;
-  border-radius: 0;
-}
-.segmented button:last-child{ border-right: none; }
-.segmented button:hover{ background: #f8fafc; }
-.segmented button.active{
-  background: #0f172a;
-  color: #fff;
-}
-.segmented button:focus{
-  outline: 2px solid rgba(15,23,42,.18);
-  outline-offset: -2px;
-}
-
-/* Wrap version for many options (e.g., Sucursales) */
-.segmentedWrap{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--b);
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 1px 0 rgba(2,6,23,.02);
-  max-height: 110px;
-  overflow: auto;
-}
-.segmentedWrap button{
-  width: auto;
-  padding: 8px 10px;
-  border: 1px solid var(--b2);
-  border-radius: 999px;
-  background: #fff;
-  color: #0f172a;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.segmentedWrap button:hover{ background: #f8fafc; }
-.segmentedWrap button.active{
-  background: #0f172a;
-  color: #fff;
-  border-color: #0f172a;
-}
-    /* Modern selector (modal) */
-    .selectRow { display:flex; gap:10px; align-items: stretch; }
-    .chipwrap { display:flex; flex-wrap: wrap; gap:8px; margin-top:10px; }
-    .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius: 999px; border: 1px solid var(--b); background:#fff; font-size: 12px; }
-    .chip button { width: auto; padding: 0; border: none; background: transparent; color: #334155; cursor: pointer; font-size: 14px; line-height: 1; }
-    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; padding: 2px 6px; border: 1px solid var(--b); border-bottom-width: 2px; border-radius: 8px; background: #fff; color:#334155; }
-
-    .overlay {
-      position: fixed; inset: 0; background: rgba(2,6,23,.45);
-      display: none; align-items: center; justify-content: center; padding: 18px;
+    :root { --bg:#0b0f1a; --card:#121a2a; --text:#e8eefc; --muted:#98a6c6; --border:#24314d; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 14px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .row > * { flex: 0 0 auto; }
+    .spacer { flex: 1 1 auto; }
+    label { color:var(--muted); font-size:14px; }
+    input[type="file"] { color:var(--muted); }
+    .chk { display:flex; gap:8px; align-items:center; }
+    .btn {
+      background:#1c2a47; color:var(--text); border:1px solid var(--border);
+      padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:600;
     }
-    .overlay.open { display:flex; }
-    .modal {
-      width: min(920px, 100%);
-      max-height: min(82vh, 760px);
-      background: #fff;
-      border: 1px solid var(--b);
-      border-radius: 18px;
-      box-shadow: 0 10px 30px rgba(2,6,23,.18);
-      display:flex; flex-direction: column;
-      overflow: hidden;
-    }
-    .modalHeader { padding: 14px 16px; border-bottom: 1px solid var(--b2); display:flex; justify-content: space-between; align-items:center; gap: 10px; }
-    .modalTitle { font-weight: 650; font-size: 14px; }
-    .modalBody { padding: 14px 16px; overflow: auto; }
-    .modalFooter { padding: 12px 16px; border-top: 1px solid var(--b2); display:flex; gap:10px; justify-content: space-between; align-items:center; flex-wrap: wrap; }
-    .searchRow { display:flex; gap:10px; align-items:center; }
-    .list { border: 1px solid var(--b); border-radius: 14px; overflow: hidden; }
-    .listHeader { background: #f8fafc; border-bottom: 1px solid var(--b2); padding: 10px 12px; display:flex; justify-content: space-between; align-items:center; gap: 10px; }
-    .listBody { max-height: 46vh; overflow: auto; }
-    /* Items: checkbox in a narrow column, text left-aligned */
-    .item{
-      display: grid;
-      grid-template-columns: 22px 1fr;
-      column-gap: 12px;
-      align-items: start;
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--b2);
-    }
-    .item:last-child{ border-bottom:none; }
-    .item:hover{ background:#f8fafc; }
-
-    .item input{
-      margin: 2px 0 0 0;
-      justify-self: start;
-    }
-    .itemText{
-      font-size: 13px;
-      color: #0f172a;
-      text-align: left;
-      line-height: 1.25;
-      word-break: break-word;
-    }
-    .count { font-size: 12px; color: var(--muted); }
-
-    @media (max-width: 1100px){
-  .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .span-12{ grid-column: span 6; }
-  .span-8{ grid-column: span 6; }
-  .span-6{ grid-column: span 6; }
-  .span-4{ grid-column: span 6; }
-  .span-3{ grid-column: span 3; }
-  .span-2{ grid-column: span 3; }
-}
-
-    @media (max-width: 980px) { .checks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 760px) {
-      .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-      .span-8{ grid-column: span 6; } .span-6{ grid-column: span 6; } .span-4{ grid-column: span 6; }
-      .span-3{ grid-column: span 3; } .span-2{ grid-column: span 3; }
-      .checks { grid-template-columns: 1fr; }
-      .selectRow { flex-direction: column; }
-      .searchRow { flex-direction: column; align-items: stretch; }
-    }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    .status { color:var(--muted); font-size:14px; }
+    #chart { height: 430px; }
+    table { width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px; }
+    th, td { border-bottom:1px solid var(--border); padding:10px; text-align:right; font-variant-numeric: tabular-nums; }
+    th:first-child, td:first-child { text-align:left; }
+    thead th { position:sticky; top:0; background:#0f172a; z-index:1; }
+    .small { font-size:12px; color:var(--muted); margin-top:6px; }
+    .hint { color:var(--muted); font-size:13px; line-height:1.35; }
+    .pill { padding:6px 10px; border:1px solid var(--border); border-radius:999px; color:var(--muted); }
   </style>
 </head>
+
 <body>
-  <h1>Gravity: importar XLS/XLSX → filtrar por fechas + horas + planes → clientes con X visitas → descargar CSV</h1>
-
-  <div class="card">
-    <div class="grid">
-      <div class="span-8">
-        <label>Cargar archivo (click) o arrastrar aquí</label>
-        <div id="dropZone" class="box">
-          <div class="row" style="justify-content: space-between; width:100%;">
-            <div>
-              <div><b>Arrastra y suelta</b> tu .xls/.xlsx aquí</div>
-              <div class="muted" id="fileInfo">Sin archivo cargado.</div>
-            </div>
-            <div style="min-width: 220px;">
-              <input id="file" type="file" accept=".xls,.xlsx" />
-            </div>
-          </div>
-        </div>
-        <div class="muted">Se usa la primera hoja del archivo automáticamente.</div>
-      </div>
-
-      <div class="span-4">
-        <label>Definir “visita” por</label>
-        <select id="visitMode">
-          <option value="doc" selected>N° Doc único (recomendado)</option>
-          <option value="row">Cada fila (no recomendado)</option>
-        </select>
-        <div class="muted">Recomendado si tu XLS tiene filas duplicadas por el mismo N° Doc (ej: tickets $1).</div>
-      </div>
-
-      <div class="span-12"><hr class="divider"></div>
-
-      <div class="span-3">
-        <label>Columna Fecha</label>
-        <select id="colFecha"></select>
-      </div>
-      <div class="span-3">
-        <label>Desde (fecha)</label>
-        <input id="dateStart" type="date" />
-      </div>
-      <div class="span-3">
-        <label>Hasta (fecha)</label>
-        <input id="dateEnd" type="date" />
-      </div>
-      <div class="span-12">
-  <label>Días de la semana (según la columna Fecha)</label>
-
-  <div class="row" style="gap:10px; align-items:center;">
-    <div class="segmented" id="dowSegment" role="group" aria-label="Días de la semana">
-      <!-- botones se generan por JS -->
-    </div>
-
-    <div class="row" style="gap:8px;">
-      <button id="dowAllBtn" class="secondary" type="button" disabled style="width:auto; padding:8px 10px;">Todos</button>
-      <button id="dowNoneBtn" class="secondary" type="button" disabled style="width:auto; padding:8px 10px;">Ninguno</button>
-    </div>
-
-    <span class="muted" id="dowHint">Selecciona días para filtrar.</span>
-  </div>
-
-  <div class="small">Tip: puedes hacer click en los días como “botones”.</div>
-</div>
-
-      <div class="span-3">
-        <label># de visitas (exacto)</label>
-        <input id="visitsExact" type="number" min="1" step="1" value="1" />
-      </div>
-
-      <div class="span-3">
-        <label>Columna Hora</label>
-        <select id="colHora"></select>
-      </div>
-      <div class="span-3">
-        <label>Hora inicio (XX:XX)</label>
-        <input id="timeStart" type="time" value="18:00" />
-      </div>
-      <div class="span-3">
-        <label>Hora fin (ZZ:ZZ)</label>
-        <input id="timeEnd" type="time" value="19:00" />
-      </div>
-
-      <div class="span-3">
-        <label>Columna Plan/Producto</label>
-        <select id="colProducto"></select>
-        <div class="small">Ej: “Plan” o “Grupo para excel”.</div>
-      </div>
-
-
-<div class="span-3">
-  <label>Columna Sucursal</label>
-  <select id="colSucursal"></select>
-</div>
-<div class="span-3">
-  <label>Columna Usuario</label>
-  <select id="colUsuario"></select>
-</div>
-<div class="span-3">
-  <label>Monto mínimo (CLP)</label>
-  <input id="minAmount" type="number" min="0" step="1" value="0" />
-  <div class="small">Filtra filas con Precio ≥ monto mínimo.</div>
-</div>
-<div class="span-12">
-  <label>Sucursales</label>
-  <div class="row" style="gap:10px; align-items:center;">
-    <div class="segmentedWrap" id="branchSegment" role="group" aria-label="Sucursales">
-      <!-- botones se generan por JS -->
-    </div>
-
-    <div class="row" style="gap:8px;">
-      <button id="branchAllMainBtn" class="secondary" type="button" disabled style="width:auto; padding:8px 10px;">Todas</button>
-      <button id="branchNoneMainBtn" class="secondary" type="button" disabled style="width:auto; padding:8px 10px;">Ninguna</button>
-    </div>
-
-    <span class="muted">Seleccionadas: <b id="branchCount">0</b></span>
-  </div>
-  <div class="small">Click para activar/desactivar sucursales (como los días).</div>
-</div>
-
-<div class="span-3">
-  <label>&nbsp;</label>
-  <button id="openUserBtn" class="secondary" disabled style="width:auto; padding:10px 12px;">Usuarios…</button>
-  <div class="small">Seleccionados: <span id="userCount">0</span></div>
-</div>
-
-      <div class="span-12">
-        <label>Planes a incluir</label>
-        <div class="selectRow">
-          <button id="openPlansBtn" class="secondary" disabled style="flex: 0 0 280px;">
-            Seleccionar planes…
-          </button>
-          <div style="flex: 1 1 auto;">
-            <div class="row">
-              <span class="pill">Seleccionados: <b id="prodCount">0</b></span>
-              <span class="pill">Total planes: <b id="prodTotal">0</b></span>
-              <span class="pill"><span class="kbd">Ctrl</span> + <span class="kbd">K</span> abre selector</span>
-            </div>
-            <div class="chipwrap" id="chips"></div>
-            <div class="muted">Muestra algunos “chips” (máx 10) para no ocupar toda la pantalla.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="span-12"><hr class="divider"></div>
-
-      <div class="span-3">
-        <label>Columna Cliente</label>
-        <select id="colAlumno"></select>
-      </div>
-      <div class="span-3">
-        <label>Columna Correo</label>
-        <select id="colCorreo"></select>
-      </div>
-      <div class="span-3">
-        <label>Columna Precio</label>
-        <select id="colPrecio"></select>
-      </div>
-      <div class="span-3">
-        <label>Columna N° Doc</label>
-        <select id="colDoc"></select>
-      </div>
-
-      <div class="span-12">
-        <label>Columnas a mostrar en la tabla</label>
-        <div id="resultColChecks" class="checks"></div>
-        <div class="muted">Esto afecta solo la tabla (el CSV siempre incluye Alumno, Correo, Visitas, Monto, DocsUnicos).</div>
-      </div>
-
-      <div class="span-12">
-        <div class="row">
-          <button id="runBtn" disabled>Procesar</button>
-          <button id="downloadBtn" class="secondary" disabled>Descargar CSV (clientes filtrados)</button>
-          <button id="copyBtn" class="secondary" disabled style="width:auto;">Copiar CSV</button>
-          <span class="muted" id="status"></span>
-        </div>
-        <div class="err" id="error"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Resumen</h2>
-    <div class="row" id="summary">
-      <span class="pill">Filas cargadas: <b id="rowsLoaded">0</b></span>
-      <span class="pill">Filas tras filtros: <b id="rowsInRange">0</b></span>
-      <span class="pill">Clientes (tras filtros): <b id="clientsInRange">0</b></span>
-      <span class="pill">Clientes con X visitas: <b id="clientsExact">0</b></span>
-      <span class="pill">Total $ (clientes con X visitas): <b id="amountExact">0</b></span>
-      <span class="pill">Total $ (filas filtradas): <b id="totalRange">0</b></span>
-      <span class="pill">Total $ (doc único filtrado): <b id="totalDocUnique">0</b></span>
-    </div>
-
-    <table>
-      <thead><tr id="theadRow"></tr></thead>
-      <tbody id="outBody"></tbody>
-    </table>
-  </div>
-
-  <div id="overlay" class="overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modalHeader">
+  <div class="wrap">
+    <div class="card">
+      <div class="row">
         <div>
-          <div id="modalTitle" class="modalTitle">Seleccionar planes</div>
-          <div class="count" id="modalSub">0 seleccionados</div>
+          <label for="file">Cargar Excel (.xls/.xlsx)</label><br/>
+          <input id="file" type="file" accept=".xls,.xlsx" />
         </div>
-        <button id="closePlansBtn" class="ghost" title="Cerrar (Esc)" style="width:auto;padding:8px 10px;border:1px solid var(--b);border-radius:12px;">
-          Cerrar
-        </button>
+
+        <div class="chk">
+          <input id="includeMemb" type="checkbox" checked />
+          <label for="includeMemb">Incluir membresías</label>
+        </div>
+
+        <div class="chk">
+          <input id="dedup" type="checkbox" />
+          <label for="dedup">Eliminar filas duplicadas</label>
+        </div>
+
+        <div class="spacer"></div>
+
+        <button id="exportCsv" class="btn" disabled>Exportar CSV</button>
       </div>
 
-      <div class="modalBody">
-        <div class="searchRow">
-          <div style="flex:1;">
-            <label>Buscar</label>
-            <input id="planSearch" type="text" placeholder="Escribe para filtrar (ej: MEMBRESIA, PASE DIARIO, ARRIENDO…)" />
-            <div class="muted">Atajos: <span class="kbd">Esc</span> cierra • <span class="kbd">Ctrl</span> + <span class="kbd">A</span> seleccionar visibles (filtrados)</div>
-          </div>
-          <div style="width:220px;">
-            <label>Mostrar</label>
-            <select id="planShowMode">
-              <option value="all" selected>Todos</option>
-              <option value="selected">Solo seleccionados</option>
-              <option value="unselected">Solo no seleccionados</option>
-            </select>
-          </div>
-        </div>
-
-        <div style="height:10px"></div>
-
-        <div class="list">
-          <div class="listHeader">
-            <div class="row">
-              <button id="selectAllFilteredBtn" class="secondary" style="width:auto;">Seleccionar visibles</button>
-              <button id="clearAllFilteredBtn" class="secondary" style="width:auto;">Quitar visibles</button>
-            </div>
-            <div class="count"><span id="filteredCount">0</span> items visibles</div>
-          </div>
-          <div class="listBody" id="planList"></div>
-        </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="status" id="status">Sin archivo cargado.</div>
+        <div class="spacer"></div>
+        <div class="pill" id="totalPill">Total (filtrado): $0</div>
       </div>
 
-      <div class="modalFooter">
-        <div class="row">
-          <span class="pill">Seleccionados: <b id="selCountFooter">0</b></span>
-          <span class="pill">Visibles: <b id="visCountFooter">0</b></span>
-        </div>
-        <div class="row">
-          <button id="selectNoneBtn" class="secondary" style="width:auto;">Limpiar todo</button>
-          <button id="selectAllBtn" class="secondary" style="width:auto;">Seleccionar todo</button>
-          <button id="applyPlansBtn">Aplicar</button>
-        </div>
+      <div class="small">
+        Membresías = Grupo para excel ∈ { MEMBRESIAS, MEMB HP, MEMB HB, MEMB HA, MEMB } (todas juntas).
       </div>
     </div>
-  
 
-
-<div class="modalFooter">
-      <div class="row">
-        <span class="pill">Seleccionados: <b id="selCountBranch">0</b></span>
-        <span class="pill">Visibles: <b id="visCountBranch">0</b></span>
+    <div class="card" style="margin-top:14px;">
+      <div id="chart"></div>
+      <div class="hint" style="margin-top:8px;">
+        Si un mes no tiene ventas, se grafica como 0 (línea continua). Si prefieres “cortes” en la línea, te lo cambio a null.
       </div>
-      <div class="row">
-        <button id="branchNoneBtn" class="secondary" style="width:auto;">Limpiar todo</button>
-        <button id="branchAllBtn" class="secondary" style="width:auto;">Seleccionar todo</button>
-        <button id="applyBranchBtn">Aplicar</button>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="row" style="margin-bottom:10px;">
+        <div style="font-weight:700;">Resumen (Mes x Año)</div>
+        <div class="spacer"></div>
+        <div class="hint" id="colsInfo"></div>
+      </div>
+      <div style="overflow:auto; max-height: 320px;">
+        <table id="table"></table>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Selector: Usuarios -->
-<div id="overlayUser" class="overlay" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitleUser">
-    <div class="modalHeader">
-      <div>
-        <div id="modalTitleUser" class="modalTitle">Seleccionar usuarios</div>
-        <div class="count" id="modalSubUser">0 seleccionados</div>
-      </div>
-      <button id="closeUserBtn" class="ghost" title="Cerrar (Esc)" style="width:auto;padding:8px 10px;border:1px solid var(--b);border-radius:12px;">
-        Cerrar
-      </button>
-    </div>
+<script>
+  // ===== Config membresías =====
+  const MEMB_GROUPS = new Set(["MEMBRESIAS","MEMB HP","MEMB HB","MEMB HA","MEMB"]);
 
-    <div class="modalBody">
-      <div class="searchRow">
-        <div style="flex:1;">
-          <label>Buscar</label>
-          <input id="userSearch" type="text" placeholder="Filtra usuarios…" />
-        </div>
-        <div style="width:220px;">
-          <label>Mostrar</label>
-          <select id="userShowMode">
-            <option value="all" selected>Todos</option>
-            <option value="selected">Solo seleccionados</option>
-            <option value="unselected">Solo no seleccionados</option>
-          </select>
-        </div>
-      </div>
+  // Estado
+  let RAW_ROWS = [];
+  let LAST_PIVOT = null; // { years:[], matrix: [12][n], totalsByYear:[] }
 
-      <div style="height:10px"></div>
+  const elFile = document.getElementById('file');
+  const elIncludeMemb = document.getElementById('includeMemb');
+  const elDedup = document.getElementById('dedup');
+  const elStatus = document.getElementById('status');
+  const elTotalPill = document.getElementById('totalPill');
+  const elExport = document.getElementById('exportCsv');
+  const elTable = document.getElementById('table');
+  const elColsInfo = document.getElementById('colsInfo');
 
-      <div class="list">
-        <div class="listHeader">
-          <div class="row">
-            <button id="selectAllVisibleUserBtn" class="secondary" style="width:auto;">Seleccionar visibles</button>
-            <button id="clearAllVisibleUserBtn" class="secondary" style="width:auto;">Quitar visibles</button>
-          </div>
-          <div class="count"><span id="userVisibleCount">0</span> items visibles</div>
-        </div>
-        <div class="listBody" id="userList"></div>
-      </div>
-    </div>
+  elFile.addEventListener('change', onLoadFile);
+  elIncludeMemb.addEventListener('change', () => RAW_ROWS.length && recomputeAndRender());
+  elDedup.addEventListener('change', () => RAW_ROWS.length && recomputeAndRender());
+  elExport.addEventListener('click', exportPivotCsv);
 
-    <div class="modalFooter">
-      <div class="row">
-        <span class="pill">Seleccionados: <b id="selCountUser">0</b></span>
-        <span class="pill">Visibles: <b id="visCountUser">0</b></span>
-      </div>
-      <div class="row">
-        <button id="userNoneBtn" class="secondary" style="width:auto;">Limpiar todo</button>
-        <button id="userAllBtn" class="secondary" style="width:auto;">Seleccionar todo</button>
-        <button id="applyUserBtn">Aplicar</button>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
+  function normalizeName(s) {
+    return (s ?? "")
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')     // quita tildes
+      .replace(/[^a-z0-9]/g,'');                          // deja alfanumérico
+  }
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  function findColumn(headers, mustContainParts) {
+    // mustContainParts: array de strings ya "normalizados"
+    const normHeaders = headers.map(h => normalizeName(h));
+    for (let i=0; i<normHeaders.length; i++) {
+      const ok = mustContainParts.every(p => normHeaders[i].includes(p));
+      if (ok) return headers[i];
+    }
+    return null;
+  }
 
-  <script>
-    const $ = (id) => document.getElementById(id);
+  function toMoneyNumber(v) {
+    if (v == null) return NaN;
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    const s = String(v).trim();
+    const digits = s.replace(/[^\d]/g,''); // "$ 7,500" -> "7500"
+    if (!digits) return NaN;
+    return Number(digits);
+  }
 
-    const fileEl = $("file");
-    const dropZone = $("dropZone");
-    const runBtn = $("runBtn");
-    const downloadBtn = $("downloadBtn");
-    const errorEl = $("error");
-    const statusEl = $("status");
+  // Convierte fechas:
+  // - Date -> ok
+  // - number -> Excel serial -> Date
+  // - string -> intenta yyyy-mm-dd o dd/mm/yyyy
+  function toDate(v) {
+    if (v instanceof Date && !isNaN(v)) return v;
 
-    const colFecha = $("colFecha");
-    const colAlumno = $("colAlumno");
-    const colCorreo = $("colCorreo");
-    const colHora = $("colHora");
-    const colPrecio = $("colPrecio");
-    const colDoc = $("colDoc");
-    const colProducto = $("colProducto");
-
-    // Nuevos filtros
-    const colSucursal = $("colSucursal");
-    const colUsuario = $("colUsuario");
-    const minAmount = $("minAmount");
-    const openUserBtn = $("openUserBtn");
-    const branchCount = $("branchCount");
-    const userCount = $("userCount");
-    const branchSegment = $("branchSegment");
-    const branchAllMainBtn = $("branchAllMainBtn");
-    const branchNoneMainBtn = $("branchNoneMainBtn");
-
-    const copyBtn = $("copyBtn");
-
-    const dateStart = $("dateStart");
-    const dateEnd = $("dateEnd");
-    const timeStart = $("timeStart");
-    const timeEnd = $("timeEnd");
-    const visitsExact = $("visitsExact");
-    const visitMode = $("visitMode");
-
-    const openPlansBtn = $("openPlansBtn");
-    const prodCountEl = $("prodCount");
-    const prodTotalEl = $("prodTotal");
-    const chipsEl = $("chips");
-
-    // Modal
-    const overlay = $("overlay");
-    const closePlansBtn = $("closePlansBtn");
-    const applyPlansBtn = $("applyPlansBtn");
-    const planSearch = $("planSearch");
-    const planShowMode = $("planShowMode");
-    const planList = $("planList");
-    const modalSub = $("modalSub");
-    const filteredCountEl = $("filteredCount");
-    const selCountFooter = $("selCountFooter");
-    const visCountFooter = $("visCountFooter");
-    const selectAllBtn = $("selectAllBtn");
-    const selectNoneBtn = $("selectNoneBtn");
-    const selectAllFilteredBtn = $("selectAllFilteredBtn");
-    const clearAllFilteredBtn = $("clearAllFilteredBtn");
-
-    // Modal Usuarios
-    const overlayUser = $("overlayUser");
-    const openUser = () => openGenericSelector("user");
-    const closeUserBtn = $("closeUserBtn");
-    const applyUserBtn = $("applyUserBtn");
-    const userSearch = $("userSearch");
-    const userShowMode = $("userShowMode");
-    const userList = $("userList");
-    const modalSubUser = $("modalSubUser");
-    const userVisibleCount = $("userVisibleCount");
-    const selCountUser = $("selCountUser");
-    const visCountUser = $("visCountUser");
-    const userAllBtn = $("userAllBtn");
-    const userNoneBtn = $("userNoneBtn");
-    const selectAllVisibleUserBtn = $("selectAllVisibleUserBtn");
-    const clearAllVisibleUserBtn = $("clearAllVisibleUserBtn");
-    
-    // Días de la semana
-    const dowSegment = $("dowSegment");
-    const dowAllBtn = $("dowAllBtn");
-    const dowNoneBtn = $("dowNoneBtn");
-    const dowHint = $("dowHint");
-
-    const resultColChecks = $("resultColChecks");
-    const theadRow = $("theadRow");
-
-    const rowsLoadedEl = $("rowsLoaded");
-    const rowsInRangeEl = $("rowsInRange");
-    const clientsInRangeEl = $("clientsInRange");
-    const clientsExactEl = $("clientsExact");
-    const amountExactEl = $("amountExact");
-    const totalRangeEl = $("totalRange");
-    const totalDocUniqueEl = $("totalDocUnique");
-    const outBody = $("outBody");
-    const fileInfo = $("fileInfo");
-
-    let rows = [];
-    let headers = [];
-    let lastFilteredClients = [];
-
-    let productValues = [];
-    let selectedProducts = new Set();
-    let draftSelected = new Set();
-
-    // Sucursales / Usuarios
-    let branchValues = [];
-    let userValues = [];
-    let selectedBranches = new Set();
-    let selectedUsers = new Set();
-    let draftGeneric = new Set();
-    let genericMode = null; // 'branch' | 'user'
-
-    // Días de la semana (0=domingo..6=sábado)
-    const DOW = [
-      { key: 'do', label: 'Do', idx: 0 },
-      { key: 'lu', label: 'Lu', idx: 1 },
-      { key: 'ma', label: 'Ma', idx: 2 },
-      { key: 'mi', label: 'Mi', idx: 3 },
-      { key: 'ju', label: 'Ju', idx: 4 },
-      { key: 'vi', label: 'Vi', idx: 5 },
-      { key: 'sa', label: 'Sa', idx: 6 },
-    ];
-    let selectedDOW = new Set(DOW.map(d => d.idx)); // por defecto: todos
-
-    const RESULT_COLS = [
-      { key: "Alumno", label: "Alumno" },
-      { key: "Correo", label: "Correo" },
-      { key: "Visitas", label: "Visitas" },
-      { key: "Monto", label: "Monto ($)" },
-      { key: "DocsUnicos", label: "Docs únicos" }
-    ];
-    const resultColState = new Map(RESULT_COLS.map(c => [c.key, true]));
-
-    function setError(msg) { errorEl.textContent = msg || ""; }
-    function setStatus(msg) { statusEl.textContent = msg || ""; }
-
-    function parseCLP(value) {
-      if (value == null) return 0;
-      if (typeof value === "number") return value;
-      const s = String(value).replace(/\\s/g, "").replace(/\\$/g, "").replace(/\\./g, "").replace(/,/g, ".");
-      const n = Number(s);
-      return Number.isFinite(n) ? n : 0;
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      // Excel serial date (aprox). Excel epoch 1899-12-30 (con bug 1900)
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const d = new Date(excelEpoch.getTime() + v * 86400000);
+      if (!isNaN(d)) return d;
     }
 
-    function parseTimeToMinutes(t) {
-  // Accept "HH:MM" / "HH:MM:SS", Date objects, or Excel time serial (fraction of day)
-  if (t == null || t === "") return null;
+    const s = String(v ?? '').trim();
+    if (!s) return null;
 
-  if (typeof t === "number" && Number.isFinite(t)) {
-    // Excel time: fraction of day
-    const mins = Math.round((t % 1) * 24 * 60);
-    return ((mins % 1440) + 1440) % 1440;
-  }
-
-  if (t instanceof Date && !isNaN(t.getTime())) {
-    return t.getHours() * 60 + t.getMinutes();
-  }
-
-  const s = String(t).trim();
-  const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-  if (m) {
-    const hh = Number(m[1]), mm = Number(m[2]);
-    if (Number.isFinite(hh) && Number.isFinite(mm)) return hh * 60 + mm;
-  }
-
-  return null;
-}
-
-    function inTimeRange(rowTime, startMin, endMin) {
-      const m = parseTimeToMinutes(rowTime);
-      if (m == null) return false;
-      if (endMin >= startMin) return m >= startMin && m <= endMin;
-      return (m >= startMin) || (m <= endMin);
+    // yyyy-mm-dd
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) {
+      const [_, Y, Mo, D] = m;
+      const d = new Date(Number(Y), Number(Mo)-1, Number(D));
+      return isNaN(d) ? null : d;
     }
 
-    function parseDateISO(v) {
-  // Returns "YYYY-MM-DD" or null.
-  if (v == null || v === "") return null;
+    // dd/mm/yyyy
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) {
+      const [_, D, Mo, Y] = m;
+      const d = new Date(Number(Y), Number(Mo)-1, Number(D));
+      return isNaN(d) ? null : d;
+    }
 
-  if (v instanceof Date && !isNaN(v.getTime())) {
-    const y = v.getFullYear();
-    const m = String(v.getMonth() + 1).padStart(2, "0");
-    const d = String(v.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    // fallback
+    const d = new Date(s);
+    return isNaN(d) ? null : d;
   }
 
-  if (typeof v === "number" && Number.isFinite(v)) {
-    // Excel date serial
-    const utc = new Date(Math.round((v - 25569) * 86400 * 1000));
-    if (!isNaN(utc.getTime())) {
-      const y = utc.getUTCFullYear();
-      const m = String(utc.getUTCMonth() + 1).padStart(2, "0");
-      const d = String(utc.getUTCDate()).padStart(2, "0");
-      return `${y}-${m}-${d}`;
+  function monthLabel(i) {
+    return ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][i-1];
+  }
+
+  async function onLoadFile() {
+    const file = elFile.files?.[0];
+    if (!file) return;
+
+    elStatus.textContent = `Leyendo: ${file.name} ...`;
+    elExport.disabled = true;
+    RAW_ROWS = [];
+    LAST_PIVOT = null;
+
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      const sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+
+      // defval: '' para no perder columnas en filas vacías
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      if (!rows.length) {
+        elStatus.textContent = `Archivo cargado, pero no hay filas.`;
+        return;
+      }
+
+      // Detectar columnas desde headers reales del JSON
+      const headers = Object.keys(rows[0]);
+
+      const dateCol  = findColumn(headers, ["fecha","crea"]);     // "Fecha de creación"
+      const priceCol = findColumn(headers, ["precio"]);           // "Precio"
+      const groupCol = findColumn(headers, ["grupo","excel"]);    // "Grupo para excel"
+
+      if (!dateCol || !priceCol || !groupCol) {
+        elStatus.textContent = `No encontré columnas necesarias.`;
+        elColsInfo.textContent =
+          `Detectado: fecha=${dateCol ?? "NO"}, precio=${priceCol ?? "NO"}, grupo=${groupCol ?? "NO"}`;
+        return;
+      }
+
+      elColsInfo.textContent = `Columnas: Fecha="${dateCol}", Precio="${priceCol}", Grupo="${groupCol}"`;
+
+      RAW_ROWS = rows.map(r => ({
+        date: toDate(r[dateCol]),
+        sale: toMoneyNumber(r[priceCol]),
+        group: String(r[groupCol] ?? '').trim()
+      })).filter(x => x.date && Number.isFinite(x.sale));
+
+      elStatus.textContent = `Cargado ${file.name} | Filas válidas: ${RAW_ROWS.length}`;
+      recomputeAndRender();
+
+    } catch (err) {
+      console.error(err);
+      elStatus.textContent = `Error leyendo archivo: ${err?.message ?? err}`;
     }
   }
 
-  const s = String(v).trim();
+  function recomputeAndRender() {
+    const includeMemb = elIncludeMemb.checked;
+    const dedup = elDedup.checked;
 
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return m[0];
+    let rows = RAW_ROWS;
 
-  m = s.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
-  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-
-  return null;
-}
-
-    function inDateRange(rowDate, startISO, endISO) {
-  // If no date filter selected, accept all rows (even if date can't be parsed)
-  const hasFilter = !!startISO || !!endISO;
-  const d = parseDateISO(rowDate);
-
-  if (!hasFilter) return true;
-  if (!d) return false;
-
-  if (startISO && d < startISO) return false;
-  if (endISO && d > endISO) return false;
-  return true;
-}
-
-
-function getWeekdayIdxFromAnyDate(v) {
-  // Devuelve 0..6 (domingo..sábado) o null
-  const iso = parseDateISO(v);
-  if (!iso) return null;
-  const dt = new Date(iso + "T00:00:00Z");
-  if (isNaN(dt.getTime())) return null;
-  return dt.getUTCDay();
-}
-
-function renderDowChecks() {
-  if (!dowSegment) return;
-  dowSegment.innerHTML = "";
-
-  DOW.forEach(d => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = d.label;
-    btn.setAttribute("aria-pressed", selectedDOW.has(d.idx) ? "true" : "false");
-    if (selectedDOW.has(d.idx)) btn.classList.add("active");
-
-    btn.addEventListener("click", () => {
-      if (selectedDOW.has(d.idx)) selectedDOW.delete(d.idx);
-      else selectedDOW.add(d.idx);
-
-      renderDowChecks(); // re-render for active styles
-    });
-
-    dowSegment.appendChild(btn);
-  });
-
-  updateDowHint();
-}
-
-function updateDowHint() {
-  const none = selectedDOW.size === 0;
-  if (dowHint) dowHint.textContent = none ? "Sin días seleccionados (no mostrará filas)." : "Selecciona días para filtrar.";
-  if (dowAllBtn) dowAllBtn.disabled = false;
-  if (dowNoneBtn) dowNoneBtn.disabled = false;
-}
-    function guessHeader(targets) {
-      const lower = headers.map(h => String(h).toLowerCase());
-      for (const t of targets) {
-        const idx = lower.indexOf(t.toLowerCase());
-        if (idx >= 0) return headers[idx];
-      }
-      for (const t of targets) {
-        const idx = lower.findIndex(h => h.includes(t.toLowerCase()));
-        if (idx >= 0) return headers[idx];
-      }
-      return headers[0] || "";
+    // Filtro membresías
+    if (!includeMemb) {
+      rows = rows.filter(r => !MEMB_GROUPS.has(r.group.trim().toUpperCase()));
     }
 
-    function fillSelect(selectEl, defaultHeader) {
-      selectEl.innerHTML = "";
-      for (const h of headers) {
-        const opt = document.createElement("option");
-        opt.value = h;
-        opt.textContent = h;
-        selectEl.appendChild(opt);
-      }
-      if (defaultHeader && headers.includes(defaultHeader)) selectEl.value = defaultHeader;
-    }
-
-    function formatCLP(n) {
-      try { return n.toLocaleString("es-CL"); } catch { return String(n); }
-    }
-
-    function toCSV(data, columns) {
-      const esc = (v) => {
-        const s = (v == null) ? "" : String(v);
-        if (/[",\\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-        return s;
-      };
-      const lines = [];
-      lines.push(columns.map(esc).join(","));
-      for (const row of data) lines.push(columns.map(c => esc(row[c])).join(","));
-      return lines.join("\\n");
-    }
-
-    function downloadText(filename, text) {
-      const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    function renderResultColChecks() {
-      resultColChecks.innerHTML = "";
-      RESULT_COLS.forEach(col => {
-        const wrap = document.createElement("label");
-        wrap.className = "check";
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.checked = resultColState.get(col.key);
-        cb.addEventListener("change", () => {
-          resultColState.set(col.key, cb.checked);
-          renderTable(lastFilteredClients);
-        });
-        const span = document.createElement("span");
-        span.textContent = col.label;
-        wrap.appendChild(cb);
-        wrap.appendChild(span);
-        resultColChecks.appendChild(wrap);
-      });
-    }
-
-    function renderHeader() {
-      theadRow.innerHTML = "";
-      const th0 = document.createElement("th");
-      th0.textContent = "#";
-      theadRow.appendChild(th0);
-
-      RESULT_COLS.forEach(col => {
-        if (!resultColState.get(col.key)) return;
-        const th = document.createElement("th");
-        th.textContent = col.label;
-        theadRow.appendChild(th);
-      });
-    }
-
-    function renderTable(items) {
-      renderHeader();
-      outBody.innerHTML = "";
-      if (!items || !items.length) return;
-
-      items.forEach((it, i) => {
-        const tr = document.createElement("tr");
-        const td0 = document.createElement("td");
-        td0.className = "mono";
-        td0.textContent = String(i + 1);
-        tr.appendChild(td0);
-
-        const add = (key, formatter) => {
-          if (!resultColState.get(key)) return;
-          const td = document.createElement("td");
-          td.className = (key === "Visitas" || key === "DocsUnicos" || key === "Monto") ? "mono" : "";
-          td.textContent = formatter ? formatter(it[key]) : (it[key] ?? "");
-          tr.appendChild(td);
-        };
-
-        add("Alumno");
-        add("Correo");
-        add("Visitas");
-        add("Monto", (v) => "$ " + formatCLP(v || 0));
-        add("DocsUnicos");
-
-        outBody.appendChild(tr);
-      });
-    }
-
-    // --- Plans selector ---
-    function normalize(s) { return String(s || "").toLowerCase(); }
-
-    function getVisiblePlans() {
-      const q = normalize(planSearch.value).trim();
-      const mode = planShowMode.value;
-
-      let list = productValues;
-
-      if (mode === "selected") list = list.filter(v => draftSelected.has(v));
-      if (mode === "unselected") list = list.filter(v => !draftSelected.has(v));
-
-      if (q) list = list.filter(v => normalize(v).includes(q));
-      return list;
-    }
-
-    function renderPlanList() {
-      const visible = getVisiblePlans();
-      planList.innerHTML = "";
-
-      modalSub.textContent = `${draftSelected.size} seleccionados`;
-      selCountFooter.textContent = String(draftSelected.size);
-      filteredCountEl.textContent = String(visible.length);
-      visCountFooter.textContent = String(visible.length);
-
-      const frag = document.createDocumentFragment();
-      visible.forEach(v => {
-        const row = document.createElement("label");
-        row.className = "item";
-
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.checked = draftSelected.has(v);
-        cb.value = v;
-
-        cb.addEventListener("change", () => {
-          if (cb.checked) draftSelected.add(v);
-          else draftSelected.delete(v);
-          modalSub.textContent = `${draftSelected.size} seleccionados`;
-          selCountFooter.textContent = String(draftSelected.size);
-        });
-
-        const text = document.createElement("div");
-        text.className = "itemText";
-        text.textContent = v;
-
-        row.appendChild(cb);
-        row.appendChild(text);
-        frag.appendChild(row);
-      });
-
-      planList.appendChild(frag);
-    }
-
-    function updatePlanSummaryUI() {
-      prodTotalEl.textContent = String(productValues.length);
-      prodCountEl.textContent = String(selectedProducts.size);
-
-      chipsEl.innerHTML = "";
-      const arr = Array.from(selectedProducts);
-      const max = 10;
-      arr.slice(0, max).forEach(v => {
-        const chip = document.createElement("span");
-        chip.className = "chip";
-        const t = document.createElement("span");
-        t.textContent = v;
-        const x = document.createElement("button");
-        x.type = "button";
-        x.title = "Quitar";
-        x.textContent = "×";
-        x.addEventListener("click", () => {
-          selectedProducts.delete(v);
-          updatePlanSummaryUI();
-        });
-        chip.appendChild(t);
-        chip.appendChild(x);
-        chipsEl.appendChild(chip);
-      });
-
-      if (arr.length > max) {
-        const more = document.createElement("span");
-        more.className = "chip";
-        more.textContent = `+${arr.length - max} más…`;
-        chipsEl.appendChild(more);
-      }
-    }
-
-    function openPlans() {
-      if (productValues.length === 0) return;
-      draftSelected = new Set(selectedProducts);
-      overlay.classList.add("open");
-      overlay.setAttribute("aria-hidden", "false");
-      planSearch.value = "";
-      planShowMode.value = "all";
-      renderPlanList();
-      planSearch.focus();
-    }
-
-    function closePlans() {
-      overlay.classList.remove("open");
-      overlay.setAttribute("aria-hidden", "true");
-    }
-
-    function applyPlans() {
-      selectedProducts = new Set(draftSelected);
-      updatePlanSummaryUI();
-      closePlans();
-    }
-
-    openPlansBtn.addEventListener("click", openPlans);
-    closePlansBtn.addEventListener("click", closePlans);
-    
-applyPlansBtn.addEventListener("click", applyPlans);
-
-    // Abrir selectores
-    // Sucursales: botones
-    branchAllMainBtn.addEventListener("click", () => { selectedBranches = new Set(branchValues); updateBranchUserCounts(); renderBranchSegment(); });
-    branchNoneMainBtn.addEventListener("click", () => { selectedBranches = new Set(); updateBranchUserCounts(); renderBranchSegment(); });
-
-    openUserBtn.addEventListener("click", () => openGenericSelector("user"));
-
-    // Cerrar / aplicar (usuarios)
-    closeUserBtn.addEventListener("click", () => closeGenericSelector("user"));
-    applyUserBtn.addEventListener("click", () => applyGenericSelector("user"));
-    userSearch.addEventListener("input", () => renderGenericList("user"));
-    userShowMode.addEventListener("change", () => renderGenericList("user"));
-    userAllBtn.addEventListener("click", () => { draftGeneric = new Set(userValues); renderGenericList("user"); });
-    userNoneBtn.addEventListener("click", () => { draftGeneric = new Set(); renderGenericList("user"); });
-    selectAllVisibleUserBtn.addEventListener("click", () => { getVisibleGeneric("user").forEach(v => draftGeneric.add(v)); renderGenericList("user"); });
-    clearAllVisibleUserBtn.addEventListener("click", () => { getVisibleGeneric("user").forEach(v => draftGeneric.delete(v)); renderGenericList("user"); });
-
-    // shortcuts
-    document.addEventListener("keydown", (e) => {
-      const isMac = navigator.platform.toLowerCase().includes("mac");
-      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
-
-      if (ctrlOrCmd && e.key.toLowerCase() === "k") {
-        if (!openPlansBtn.disabled) {
-          e.preventDefault();
-          openPlans();
-        }
-      }
-      if (e.key === "Escape") {
-        if (overlay.classList.contains("open")) { e.preventDefault(); closePlans(); }
-        if (overlayUser.classList.contains("open")) { e.preventDefault(); closeGenericSelector("user"); }
-      }
-      if (overlay.classList.contains("open") && ctrlOrCmd && e.key.toLowerCase() === "a") {
-        e.preventDefault();
-        getVisiblePlans().forEach(v => draftSelected.add(v));
-        renderPlanList();
-      }
-    });
-
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) closePlans(); });
-    overlayUser.addEventListener("click", (e) => { if (e.target === overlayUser) closeGenericSelector("user"); });
-
-    function computeProductValues() {
-      if (!rows.length) return;
-      const hProd = colProducto.value;
-      const set = new Set();
+    // Opcional: eliminar duplicadas (simple hash)
+    if (dedup) {
+      const seen = new Set();
+      const out = [];
       for (const r of rows) {
-        const v = String(r[hProd] ?? "").trim();
-        if (v) set.add(v);
+        const key = `${r.date.getFullYear()}-${r.date.getMonth()+1}-${r.date.getDate()}|${r.sale}|${r.group}`;
+        if (!seen.has(key)) { seen.add(key); out.push(r); }
       }
-      productValues = Array.from(set).sort((a,b) => String(a).localeCompare(String(b), "es"));
-      selectedProducts = new Set(productValues); // default all
-      updatePlanSummaryUI();
-      openPlansBtn.disabled = productValues.length === 0;
+      rows = out;
     }
 
-    colProducto.addEventListener("change", computeProductValues);
-    colSucursal.addEventListener("change", () => {
-      if (!rows.length) return;
-      const hS = colSucursal.value;
-      const bs = new Set();
-      for (const r of rows) { const sv = String(r[hS] ?? "").trim(); if (sv) bs.add(sv); }
-      branchValues = Array.from(bs).sort((a,b)=>String(a).localeCompare(String(b),"es"));
-      selectedBranches = new Set(branchValues);
-      updateBranchUserCounts();
-    });
-    colUsuario.addEventListener("change", () => {
-      if (!rows.length) return;
-      const hU = colUsuario.value;
-      const us = new Set();
-      for (const r of rows) { const uv = String(r[hU] ?? "").trim(); if (uv) us.add(uv); }
-      userValues = Array.from(us).sort((a,b)=>String(a).localeCompare(String(b),"es"));
-      selectedUsers = new Set(userValues);
-      updateBranchUserCounts();
-      openUserBtn.disabled = userValues.length === 0;
-    });
+    if (!rows.length) {
+      Plotly.purge('chart');
+      elTable.innerHTML = '';
+      elTotalPill.textContent = `Total (filtrado): $0`;
+      elStatus.textContent = `Sin datos con el filtro actual.`;
+      elExport.disabled = true;
+      return;
+    }
 
-    
-// --- Selector genérico (Sucursal / Usuario) ---
-function getGenericConfig(mode) {
-  if (mode === "user") {
-    return {
-      overlay: overlayUser,
-      values: userValues,
-      selected: selectedUsers,
-      search: userSearch,
-      showMode: userShowMode,
-      list: userList,
-      modalSub: modalSubUser,
-      visibleCount: userVisibleCount,
-      selCount: selCountUser,
-      visCount: visCountUser,
-      allBtn: userAllBtn,
-      noneBtn: userNoneBtn,
-      selectAllVisibleBtn: selectAllVisibleUserBtn,
-      clearAllVisibleBtn: clearAllVisibleUserBtn,
-      applyBtn: applyUserBtn,
-      closeBtn: closeUserBtn
+    // Pivot Mes(1..12) x Año
+    const yearSet = new Set(rows.map(r => r.date.getFullYear()));
+    const years = Array.from(yearSet).sort((a,b)=>a-b);
+    const idx = new Map(years.map((y,i)=>[y,i]));
+    const M = Array.from({length:12}, () => Array(years.length).fill(0));
+
+    let total = 0;
+    for (const r of rows) {
+      const y = r.date.getFullYear();
+      const m = r.date.getMonth(); // 0..11
+      const j = idx.get(y);
+      M[m][j] += r.sale;
+      total += r.sale;
+    }
+
+    LAST_PIVOT = { years, matrix: M, total };
+    elTotalPill.textContent = `Total (filtrado): $${formatCLP(total)}`;
+    elStatus.textContent = `Filas (filtradas): ${rows.length} | Membresías: ${includeMemb ? "Sí" : "No"} | Duplicadas: ${dedup ? "Sí" : "No"}`;
+
+    renderChart(years, M);
+    renderTable(years, M);
+    elExport.disabled = false;
+  }
+
+  function renderChart(years, M) {
+    const x = Array.from({length:12}, (_,i)=>i+1);
+    const traces = years.map((y, j) => ({
+      x,
+      y: M.map(row => row[j]),
+      mode: 'lines+markers',
+      name: String(y),
+      line: { width: 2 }
+    }));
+
+    const layout = {
+      title: 'Ventas mensuales por año',
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: '#e8eefc' },
+      xaxis: {
+        title: 'Mes',
+        tickmode: 'array',
+        tickvals: x,
+        ticktext: x.map(monthLabel),
+        gridcolor: '#24314d'
+      },
+      yaxis: {
+        title: 'Venta ($)',
+        gridcolor: '#24314d',
+        separatethousands: true
+      },
+      legend: { x: 0, y: 1, bgcolor: 'rgba(0,0,0,0)' },
+      margin: { l: 70, r: 20, t: 55, b: 55 }
     };
+
+    const config = { responsive: true, displaylogo: false };
+    Plotly.newPlot('chart', traces, layout, config);
   }
-  return null;
-}
 
-function getVisibleGeneric(mode) {
-  const cfg = getGenericConfig(mode);
-  if (!cfg) return [];
-  const q = normalize(cfg.search.value).trim();
-  const sm = cfg.showMode.value;
+  function renderTable(years, M) {
+    let html = '';
+    html += '<thead><tr><th>Mes</th>';
+    for (const y of years) html += `<th>${y}</th>`;
+    html += '</tr></thead><tbody>';
 
-  let list = cfg.values;
-  if (sm === "selected") list = list.filter(v => draftGeneric.has(v));
-  if (sm === "unselected") list = list.filter(v => !draftGeneric.has(v));
-  if (q) list = list.filter(v => normalize(v).includes(q));
-  return list;
-}
-
-function renderGenericList(mode) {
-  const cfg = getGenericConfig(mode);
-  if (!cfg) return;
-  const visible = getVisibleGeneric(mode);
-
-  cfg.list.innerHTML = "";
-  cfg.modalSub.textContent = `${draftGeneric.size} seleccionados`;
-  cfg.selCount.textContent = String(draftGeneric.size);
-  cfg.visibleCount.textContent = String(visible.length);
-  cfg.visCount.textContent = String(visible.length);
-
-  const frag = document.createDocumentFragment();
-  visible.forEach(v => {
-    const row = document.createElement("label");
-    row.className = "item";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = draftGeneric.has(v);
-    cb.value = v;
-
-    cb.addEventListener("change", () => {
-      if (cb.checked) draftGeneric.add(v);
-      else draftGeneric.delete(v);
-      cfg.modalSub.textContent = `${draftGeneric.size} seleccionados`;
-      cfg.selCount.textContent = String(draftGeneric.size);
-    });
-
-    const text = document.createElement("div");
-    text.className = "itemText";
-    text.textContent = v;
-
-    row.appendChild(cb);
-    row.appendChild(text);
-    frag.appendChild(row);
-  });
-  cfg.list.appendChild(frag);
-}
-
-function openGenericSelector(mode) {
-  const cfg = getGenericConfig(mode);
-  if (!cfg || cfg.values.length === 0) return;
-
-  genericMode = mode;
-  draftGeneric = new Set(cfg.selected); // copiar selección actual
-  cfg.search.value = "";
-  cfg.showMode.value = "all";
-  cfg.overlay.classList.add("open");
-  cfg.overlay.setAttribute("aria-hidden", "false");
-  renderGenericList(mode);
-  cfg.search.focus();
-}
-
-function closeGenericSelector(mode) {
-  const cfg = getGenericConfig(mode);
-  if (!cfg) return;
-  cfg.overlay.classList.remove("open");
-  cfg.overlay.setAttribute("aria-hidden", "true");
-}
-
-function applyGenericSelector(mode) {
-  const cfg = getGenericConfig(mode);
-  if (!cfg) return;
-  // aplicar
-  if (mode === "branch") selectedBranches = new Set(draftGeneric);
-  if (mode === "user") selectedUsers = new Set(draftGeneric);
-
-  updateBranchUserCounts();
-  closeGenericSelector(mode);
-}
-
-function updateBranchUserCounts() {
-  if (branchCount) branchCount.textContent = String(selectedBranches.size);
-  if (userCount) userCount.textContent = String(selectedUsers.size);
-}
-
-
-function renderBranchSegment() {
-  if (!branchSegment) return;
-  branchSegment.innerHTML = "";
-  branchValues.forEach(v => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = v;
-    if (selectedBranches.has(v)) btn.classList.add("active");
-    btn.addEventListener("click", () => {
-      if (selectedBranches.has(v)) selectedBranches.delete(v);
-      else selectedBranches.add(v);
-      updateBranchUserCounts();
-      renderBranchSegment();
-    });
-    branchSegment.appendChild(btn);
-  });
-  if (branchAllMainBtn) branchAllMainBtn.disabled = branchValues.length === 0;
-  if (branchNoneMainBtn) branchNoneMainBtn.disabled = branchValues.length === 0;
-}
-
-// --- File loading ---
-    async function loadFile(file) {
-      setError(""); setStatus("");
-      rows = []; headers = []; lastFilteredClients = [];
-      productValues = []; selectedProducts = new Set(); draftSelected = new Set();
-      openPlansBtn.disabled = true;
-      prodCountEl.textContent = "0"; prodTotalEl.textContent = "0"; chipsEl.innerHTML = "";
-      runBtn.disabled = true; downloadBtn.disabled = true; copyBtn.disabled = true;
-
-      if (!file) { fileInfo.textContent = "Sin archivo cargado."; return; }
-      fileInfo.textContent = `Archivo: ${file.name} (${Math.round(file.size/1024)} KB)`;
-
-      try {
-        const data = await file.arrayBuffer();
-        const wb = XLSX.read(data, { type: "array", cellDates: true });
-        const sheetName = wb.SheetNames[0];
-        const ws = wb.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
-
-        if (!json.length) { setError("El XLS parece vacío (o no se pudo leer la primera hoja)."); return; }
-
-        rows = json;
-        headers = Object.keys(json[0]);
-
-        fillSelect(colFecha, guessHeader(["Fecha de creación", "Fecha", "Created date"]));
-        fillSelect(colAlumno, guessHeader(["Alumno", "Cliente", "Nombre"]));
-        fillSelect(colCorreo, guessHeader(["Correo electrónico", "Correo", "Email", "E-mail"]));
-        fillSelect(colHora, guessHeader(["Hora de creación", "Hora"]));
-        fillSelect(colPrecio, guessHeader(["Precio", "Monto", "Total"]));
-        fillSelect(colDoc, guessHeader(["N° Doc", "N° Doc.", "Nº Doc", "Documento", "Nro Doc"]));
-        fillSelect(colProducto, guessHeader(["Plan", "Producto", "Grupo para excel", "Grupo"]));
-        fillSelect(colSucursal, guessHeader(["Sucursal"]));
-        fillSelect(colUsuario, guessHeader(["Usuario", "Recepcionista"]));
-
-        // date range auto
-        const hF = colFecha.value;
-        const dates = rows.map(r => parseDateISO(r[hF])).filter(Boolean).sort();
-        if (dates.length) { dateStart.value = dates[0]; dateEnd.value = dates[dates.length - 1]; }
-        else { dateStart.value = ""; dateEnd.value = ""; }
-
-        computeProductValues();
-
-        // Sucursales/Usuarios: valores únicos y selección por defecto (todos)
-        const hS = colSucursal.value;
-        const hU = colUsuario.value;
-        const bs = new Set();
-        const us = new Set();
-        for (const r of rows) {
-          const sv = String(r[hS] ?? "").trim();
-          const uv = String(r[hU] ?? "").trim();
-          if (sv) bs.add(sv);
-          if (uv) us.add(uv);
-        }
-        branchValues = Array.from(bs).sort((a,b)=>String(a).localeCompare(String(b),"es"));
-        userValues = Array.from(us).sort((a,b)=>String(a).localeCompare(String(b),"es"));
-        selectedBranches = new Set(branchValues);
-        selectedUsers = new Set(userValues);
-        updateBranchUserCounts();
-          openUserBtn.disabled = userValues.length === 0;
-
-        // Días: por defecto todos seleccionados
-        selectedDOW = new Set(DOW.map(d => d.idx));
-        dowAllBtn.disabled = false;
-        dowNoneBtn.disabled = false;
-        renderDowChecks();
-    renderBranchSegment();
-
-        renderResultColChecks();
-        renderHeader();
-        outBody.innerHTML = "";
-        rowsLoadedEl.textContent = rows.length;
-
-        runBtn.disabled = false;
-        setStatus(`Hoja: "${sheetName}" cargada. Listo para procesar.`);
-      } catch (err) {
-        console.error(err);
-        setError("No pude leer el archivo. Asegúrate que sea .xls/.xlsx válido.");
+    for (let i=0; i<12; i++) {
+      html += `<tr><td>${monthLabel(i+1)}</td>`;
+      for (let j=0; j<years.length; j++) {
+        html += `<td>${formatCLP(M[i][j])}</td>`;
       }
+      html += '</tr>';
+    }
+    html += '</tbody>';
+    elTable.innerHTML = html;
+  }
+
+  function exportPivotCsv() {
+    if (!LAST_PIVOT) return;
+    const { years, matrix: M } = LAST_PIVOT;
+
+    const lines = [];
+    lines.push(["Month", ...years.map(y => `y${y}`)].join(','));
+
+    for (let i=0; i<12; i++) {
+      const row = [i+1, ...years.map((_,j)=> Math.round(M[i][j]))];
+      lines.push(row.join(','));
     }
 
-    fileEl.addEventListener("change", async (e) => {
-      const file = e.target.files?.[0];
-      await loadFile(file);
-    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
 
-    ["dragenter","dragover"].forEach(ev => {
-      dropZone.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add("dragover"); });
-    });
-    ["dragleave","drop"].forEach(ev => {
-      dropZone.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove("dragover"); });
-    });
-    dropZone.addEventListener("drop", async (e) => {
-      const file = e.dataTransfer?.files?.[0];
-      if (file) await loadFile(file);
-    });
-
-    // --- Processing ---
-    runBtn.addEventListener("click", () => {
-      setError(""); setStatus("");
-      if (!rows.length) { setError("Carga un archivo primero."); return; }
-
-      const hFecha = colFecha.value;
-      const hAlumno = colAlumno.value;
-      const hCorreo = colCorreo.value;
-      const hHora = colHora.value;
-      const hPrecio = colPrecio.value;
-      const hDoc = colDoc.value;
-      const hProd = colProducto.value;
-
-      const startMin = parseTimeToMinutes(timeStart.value);
-      const endMin = parseTimeToMinutes(timeEnd.value);
-      if (startMin == null || endMin == null) { setError("Horas inválidas. Usa formato HH:MM."); return; }
-
-      const startISO = dateStart.value || null;
-      const endISO = dateEnd.value || null;
-
-      const exact = Number(visitsExact.value);
-      if (!Number.isFinite(exact) || exact < 1) { setError("El # de visitas debe ser un entero >= 1."); return; }
-
-      const mode = visitMode.value;
-      if (selectedProducts.size === 0) { setError("No hay planes seleccionados. Abre “Seleccionar planes…” y marca al menos uno."); return; }
-
-      
-
-const minCLP = Math.max(0, Number(minAmount.value || 0) || 0);
-const hS = colSucursal.value;
-const hU = colUsuario.value;
-
-const filteredRows = rows.filter(r => {
-  if (!inDateRange(r[hFecha], startISO, endISO)) return false;
-
-  // Días de la semana
-  const dow = getWeekdayIdxFromAnyDate(r[hFecha]);
-  if (dow == null) return false;
-  if (!selectedDOW.has(dow)) return false;
-
-  if (!inTimeRange(r[hHora], startMin, endMin)) return false;
-
-  // Sucursal / Usuario
-  const sv = String(r[hS] ?? "").trim();
-  const uv = String(r[hU] ?? "").trim();
-  if (selectedBranches.size && !selectedBranches.has(sv)) return false;
-  if (selectedUsers.size && !selectedUsers.has(uv)) return false;
-
-  // Plan/Producto
-  const pv = String(r[hProd] ?? "").trim();
-  if (!selectedProducts.has(pv)) return false;
-
-  // Monto mínimo
-  if (parseCLP(r[hPrecio]) < minCLP) return false;
-
-  return true;
-});
-
-      rowsInRangeEl.textContent = filteredRows.length;
-
-      const totalRange = filteredRows.reduce((acc, r) => acc + parseCLP(r[hPrecio]), 0);
-
-      const seenDoc = new Set();
-      let totalDocUnique = 0;
-      for (const r of filteredRows) {
-        const doc = String(r[hDoc] ?? "").trim();
-        if (!doc) continue;
-        if (!seenDoc.has(doc)) { seenDoc.add(doc); totalDocUnique += parseCLP(r[hPrecio]); }
-      }
-
-      totalRangeEl.textContent = "$ " + formatCLP(totalRange);
-      totalDocUniqueEl.textContent = "$ " + formatCLP(totalDocUnique);
-
-      const byClient = new Map();
-      for (const r of filteredRows) {
-        const alumno = String(r[hAlumno] ?? "").trim();
-        const correo = String(r[hCorreo] ?? "").trim();
-        const key = (correo || alumno || "").toLowerCase();
-        if (!key) continue;
-
-        if (!byClient.has(key)) byClient.set(key, { Alumno: alumno, Correo: correo, rows: 0, monto: 0, docs: new Set() });
-        const item = byClient.get(key);
-        item.rows += 1;
-        item.monto += parseCLP(r[hPrecio]);
-        const doc = String(r[hDoc] ?? "").trim();
-        if (doc) item.docs.add(doc);
-      }
-
-      const clientsAll = Array.from(byClient.values());
-      clientsInRangeEl.textContent = clientsAll.length;
-
-      const clientsWithVisits = clientsAll.map(c => {
-        const visitas = (mode === "row") ? c.rows : c.docs.size;
-        return { Alumno: c.Alumno, Correo: c.Correo, Visitas: visitas, Monto: c.monto, DocsUnicos: c.docs.size };
-      });
-
-      const filteredClients = clientsWithVisits
-        .filter(c => c.Visitas === exact)
-        .sort((a, b) => (a.Alumno || "").localeCompare(b.Alumno || "", "es"));
-
-      clientsExactEl.textContent = filteredClients.length;
-
-      const amountExact = filteredClients.reduce((acc, c) => acc + (Number(c.Monto) || 0), 0);
-      if (amountExactEl) amountExactEl.textContent = "$ " + formatCLP(amountExact);
-
-      lastFilteredClients = filteredClients;
-      renderTable(filteredClients);
-      downloadBtn.disabled = filteredClients.length === 0;
-      copyBtn.disabled = filteredClients.length === 0;
-
-      setStatus(`Procesado. Clientes con ${exact} visita(s): ${filteredClients.length}.`);
-    });
-
-    downloadBtn.addEventListener("click", () => {
-      if (!lastFilteredClients.length) return;
-
-      const startD = dateStart.value || "sin_inicio";
-      const endD = dateEnd.value || "sin_fin";
-      const startT = timeStart.value || "sin_hora_inicio";
-      const endT = timeEnd.value || "sin_hora_fin";
-      const exact = visitsExact.value;
-
-      const cols = ["Alumno", "Correo", "Visitas", "Monto", "DocsUnicos"];
-      const csv = toCSV(lastFilteredClients.map(x => ({
-          Alumno: x.Alumno, Correo: x.Correo, Visitas: x.Visitas, Monto: x.Monto, DocsUnicos: x.DocsUnicos
-      })), cols);
-
-      downloadText(`clientes_${exact}_visitas_${startD}_a_${endD}_${startT}-${endT}.csv`, csv);
-    });
-
-
-async function copyTextToClipboard(text) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch (e) {}
-  // Fallback
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    ta.style.top = "-9999px";
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    const ok = document.execCommand("copy");
-    ta.remove();
-    return ok;
-  } catch (e) {
-    return false;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ventas_mensuales.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
-}
 
-copyBtn.addEventListener("click", async () => {
-  if (!lastFilteredClients.length) return;
-
-  const cols = ["Alumno", "Correo", "Visitas", "Monto", "DocsUnicos"];
-  const csv = toCSV(lastFilteredClients.map(x => ({
-    Alumno: x.Alumno,
-    Correo: x.Correo,
-    Visitas: x.Visitas,
-    Monto: x.Monto,
-    DocsUnicos: x.DocsUnicos
-  })), cols);
-
-  const ok = await copyTextToClipboard(csv);
-  setStatus(ok ? "CSV copiado al portapapeles ✅" : "No pude copiar (tu navegador lo bloqueó).");
-});
-
-    // Init
-    renderResultColChecks();
-    renderHeader();
-    renderDowChecks();
+  function formatCLP(n) {
+    const x = Math.round(Number(n) || 0);
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
 </script>
 </body>
 </html>
